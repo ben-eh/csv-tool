@@ -1,4 +1,4 @@
-import { Typography, Input } from '@mui/material';
+import { Typography, Input, Button } from '@mui/material';
 import './App.css';
 import Papa from 'papaparse';
 import { useEffect, useState } from 'react';
@@ -8,14 +8,14 @@ import { useEffect, useState } from 'react';
 function App() {
 
 	// state variables for monkey sheet
-	const [ monkeyHeaderRow, setMonkeyHeaderRow ] = useState([]);
-	const [ monkeyData, setMonkeyData ] = useState([]);
+	const [monkeyHeaderRow, setMonkeyHeaderRow] = useState([]);
+	const [monkeyData, setMonkeyData] = useState([]);
 
 	// state variables for master sheet
-	const [ masterHeaderRow, setMasterHeaderRow ] = useState([]);
-	const [ masterData, setMasterData ] = useState([]);
-	const [ masterEmailList, setMasterEmailList ] = useState([]);
-	const [ masterEmailDuplicates, setMasterEmailDuplicates ] = useState([]);
+	const [masterHeaderRow, setMasterHeaderRow] = useState([]);
+	const [masterData, setMasterData] = useState([]);
+	const [masterEmailList, setMasterEmailList] = useState([]);
+	const [masterEmailDuplicates, setMasterEmailDuplicates] = useState([]);
 
 	// useEffect(() => {
 	// 	const duplicatesArray = masterData.reduce((acc, curr) => {
@@ -26,47 +26,69 @@ function App() {
 	// }, [masterData, masterEmailList])
 
 	useEffect(() => {
-		const duplicates = masterData.filter((duplicatesRow) => {
-			const count = masterData.filter((countsRow) => {
-				return duplicatesRow.email === countsRow.email
+		const duplicates = masterData.filter((outerRow) => {
+			const count = masterData.filter((innnerRow) => {
+				return outerRow.email === innnerRow.email
 			}).length;
 			return count > 1;
 		}).map((item) => {
 			return item.email;
 		})
-		console.log(duplicates);
+		// console.log(duplicates);
 	})
-	
+
 	useEffect(() => {
+		// get master list of emails
 		const emailList = masterData.reduce((acc, curr) => {
 			if (!acc.includes(curr.email)) {
 				return [...acc, curr.email];
 			}
 			return acc;
 		}, []);
-		setMasterEmailList(emailList);
+		// get unique list (in case of duplicates)
+		const uniqueEmailList = getUniqueEmailsMasterList(emailList);
+		setMasterEmailList(uniqueEmailList);
 	}, [masterData, masterHeaderRow]);
+
+	const getUniqueEmailsMasterList = (list) => {
+		let seen = {};
+		return list.filter((item) => {
+			return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+		})
+	}
+
+	const getUniqueRows = (list) => {
+		let alreadyInList = [];
+		return list.filter((obj) => {
+			if (!alreadyInList.includes(obj.email)) {
+				alreadyInList.push(obj.email);
+				return true;
+			} else {
+				return false;
+			}
+		})
+	}
 
 	// const emailIndex = data[0].indexOf('email');
 
-	if (monkeyHeaderRow.length > 0) {
-		console.log('Monkey Survery Data');
-		console.log(monkeyHeaderRow);
-		console.log(monkeyData);
-	}
+	// if (monkeyHeaderRow.length > 0) {
+	// 	console.log('Monkey Survery Data');
+	// 	console.log(monkeyHeaderRow);
+	// 	console.log(monkeyData);
+	// }
 
-	if (masterHeaderRow.length > 0 ) {
-		console.log('Master Sheet Data');
-		console.log(masterHeaderRow);
-		console.log(masterData);
-		console.log(`This is the master email list: ${masterEmailList}`);
-		console.log(`duplicate email addresses: ${masterEmailDuplicates}`);
-	}
+	// if (masterHeaderRow.length > 0 ) {
+	// 	console.log('Master Sheet Data');
+	// 	console.log(masterHeaderRow);
+	// 	console.log(masterData);
+	// 	console.log(`This is the master email list: ${masterEmailList}`);
+	// 	console.log(`duplicate email addresses: ${masterEmailDuplicates}`);
+	// }
 
-	
-	
+
+
 	// console.log(emailIndex);
-	
+
 	const monkeySurveyUpload = (e) => {
 		const file = e.target.files[0];
 		Papa.parse(file, {
@@ -77,7 +99,7 @@ function App() {
 		Papa.parse(file, {
 			header: true,
 			complete: (results) => {
-				setMonkeyData(results.data);
+				setMonkeyData(getUniqueRows(results.data));
 			},
 		});
 	}
@@ -97,8 +119,33 @@ function App() {
 		});
 	}
 
-  return (
-    <div className="App">
+	const processBothCSVs = () => {
+		if (monkeyData.length === 0 || masterData.length === 0) {
+			alert('please check that you have both csv files chosen, or check that there are rows in both files')
+			return;
+		} else {
+			const test = getNewRows();
+			// console.log('Monkey Data:');
+			// monkeyData.forEach((row) => {
+			// 	console.log(row);
+			// })
+			// console.log('Master Data:');
+			// masterData.forEach((row) => {
+			// 	console.log(row);
+			// })
+			console.log('These are the new rows:');
+			console.log(test);
+		}
+	}
+
+	const getNewRows = () => {
+		return monkeyData.filter((row) => {
+			return !masterEmailList.includes(row.email);
+		})
+	}
+
+	return (
+		<div className="App">
 			<Typography>
 				Drag in your Survey Monkey csv here
 			</Typography>
@@ -113,8 +160,15 @@ function App() {
 				type="file"
 				onChange={masterSurveyUpload}
 			/>
-    </div>
-  );
+			<br />
+			<Button
+				variant="contained"
+				onClick={processBothCSVs}
+			>
+				Process
+			</Button>
+		</div>
+	);
 }
 
 export default App;
